@@ -1,5 +1,4 @@
 import { type ImageSource } from "expo-image";
-import { View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
