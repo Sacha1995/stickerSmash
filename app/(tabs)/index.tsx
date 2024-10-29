@@ -1,4 +1,4 @@
-import { StyleSheet, View, Platform } from "react-native";
+import { StyleSheet, View, View as ViewType, Platform } from "react-native";
 import ImageViewer from "@/components/ImageViewer";
 import Button from "@/components/Button";
 import React, { useState, useRef } from "react";
@@ -26,7 +26,8 @@ export default function Index() {
     undefined
   );
   const [status, requestPermission] = MediaLibrary.usePermissions();
-  const imageRef = useRef(null);
+  const webRef = useRef<HTMLDivElement | null>(null);
+  const nativeRef = useRef<ViewType | null>(null);
 
   if (status === null) {
     requestPermission();
@@ -48,6 +49,7 @@ export default function Index() {
 
   const onReset = () => {
     setShowAppOptions(false);
+    setPickedEmoji(undefined);
   };
 
   const onAddSticker = () => {
@@ -61,7 +63,7 @@ export default function Index() {
   const onSaveImageAsync = async () => {
     if (Platform.OS !== "web") {
       try {
-        const localUri = await captureRef(imageRef, {
+        const localUri = await captureRef(nativeRef, {
           height: 440,
           quality: 1,
         });
@@ -75,16 +77,18 @@ export default function Index() {
       }
     } else {
       try {
-        const dataUrl = await domtoimage.toJpeg(imageRef.current, {
-          quality: 0.95,
-          width: 320,
-          height: 440,
-        });
+        if (webRef.current) {
+          const dataUrl = await domtoimage.toJpeg(webRef.current, {
+            quality: 0.95,
+            width: 320,
+            height: 440,
+          });
 
-        let link = document.createElement("a");
-        link.download = "sticker-smash.jpeg";
-        link.href = dataUrl;
-        link.click();
+          let link = document.createElement("a");
+          link.download = "sticker-smash.jpeg";
+          link.href = dataUrl;
+          link.click();
+        }
       } catch (e) {
         console.log(e);
       }
@@ -94,15 +98,27 @@ export default function Index() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.imageContainer}>
-        <View ref={imageRef} collapsable={false}>
-          <ImageViewer
-            imgSource={PlaceholderImage}
-            selectedImage={selectedImage}
-          />
-          {pickedEmoji && (
-            <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
-          )}
-        </View>
+        {Platform.OS === "web" ? (
+          <div ref={webRef} style={styles.imageContainerWeb}>
+            <ImageViewer
+              imgSource={PlaceholderImage}
+              selectedImage={selectedImage}
+            />
+            {pickedEmoji && (
+              <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
+            )}
+          </div>
+        ) : (
+          <View ref={nativeRef} collapsable={false}>
+            <ImageViewer
+              imgSource={PlaceholderImage}
+              selectedImage={selectedImage}
+            />
+            {pickedEmoji && (
+              <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
+            )}
+          </View>
+        )}
       </View>
       {showAppOptions ? (
         <View style={styles.optionsContainer}>
@@ -149,6 +165,11 @@ const styles = StyleSheet.create({
   footerContainer: {
     flex: 1 / 3,
     alignItems: "center",
+  },
+  imageContainerWeb: {
+    width: 320,
+    height: 440,
+    position: "relative",
   },
   optionsContainer: {
     position: "absolute",
